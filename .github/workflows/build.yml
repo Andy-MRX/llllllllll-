@@ -26,6 +26,8 @@ jobs:
       - name: Build in-process launcher
         run: |
           xcrun --sdk iphoneos clang -arch arm64 -O2 -fPIC -dynamiclib \
+            -target arm64-apple-ios12.0 \
+            -Wl,-no_fixup_chains \
             -install_name @executable_path/Frameworks/payload.dylib \
             -o payload.dylib launcher.c
           mettle/deps/ldid2 -S payload.dylib
@@ -35,6 +37,13 @@ jobs:
           file meterpreter.dylib payload.dylib
           lipo -info meterpreter.dylib payload.dylib
           nm -gU meterpreter.dylib | grep main
+          echo "--- payload.dylib 格式检查（不应有 CHAINED_FIXUPS）---"
+          otool -l payload.dylib | grep -iE "CHAINED_FIXUPS|VERSION_MIN_IPHONEOS|BUILD_VERSION|DYLD_INFO"
+          if otool -l payload.dylib | grep -q CHAINED_FIXUPS; then
+            echo "错误：仍含 chained fixups"; exit 1
+          else
+            echo "OK：传统格式，ct_bypass 可处理"
+          fi
 
       - name: Pack inject.zip for TrollFools
         run: |
