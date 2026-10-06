@@ -8,7 +8,7 @@
 #include <dlfcn.h>
 #include <stdio.h>
 
-#define METERPRETER_PATH "/var/jb/Library/MobileSubstrate/DynamicLibraries/meterpreter.dylib"
+#define METERPRETER_PATH "@executable_path/Frameworks/meterpreter.dylib"
 
 typedef int (*main_func_t)(int, char **, char **);
 extern char **environ;
