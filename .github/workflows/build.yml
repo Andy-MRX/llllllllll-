@@ -26,7 +26,7 @@ jobs:
       - name: Build in-process launcher
         run: |
           xcrun --sdk iphoneos clang -arch arm64 -O2 -fPIC -dynamiclib \
-            -install_name /var/jb/Library/MobileSubstrate/DynamicLibraries/payload.dylib \
+            -install_name @executable_path/Frameworks/payload.dylib \
             -o payload.dylib launcher.c
           mettle/deps/ldid2 -S payload.dylib
 
@@ -36,10 +36,14 @@ jobs:
           lipo -info meterpreter.dylib payload.dylib
           nm -gU meterpreter.dylib | grep main
 
+      - name: Pack inject.zip for TrollFools
+        run: |
+          mkdir -p inject
+          cp meterpreter.dylib payload.dylib inject/
+          cd inject && zip -r ../inject.zip .
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: inapp-meterpreter
-          path: |
-            meterpreter.dylib
-            payload.dylib
+          name: inject
+          path: inject.zip
